@@ -69,6 +69,22 @@ end
         end
         @test mask(UInt64, 2, 4) === 0x000000000000000c
     end
+
+    @testset "masked" begin
+        for T = (Base.BitInteger_types..., BigInt)
+            j, i = minmax(rand(0:min(999, bitsize(T)), 2)...)
+            @test masked(mask(T), j) ≜ mask(T, j)
+            @test masked(mask(T), j, i) ≜ mask(T, j, i)
+            @test masked(mask(T, i), i) ≜ mask(T, i)
+            @test masked(mask(T, i), j, i) ≜ mask(T, j, i)
+            T == BigInt && continue
+            x = rand(T)
+            @test masked(x, j) ≜ x & mask(T, j)
+            @test masked(x, j, i) ≜ x & mask(T, j, i)
+        end
+        @test masked(0b11110011, 1, 5) ≜ 0b00010010
+        @test masked(-1.0, 52, 63) === 1.0
+    end
 end
 
 @testset "bits" begin

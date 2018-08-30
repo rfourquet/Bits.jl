@@ -2,7 +2,7 @@
 
 module Bits
 
-export bitsize, bits, bit, tstbit, mask
+export bitsize, bits, bit, tstbit, mask, masked
 
 using Base: BitInteger, BitIntegerType
 
@@ -166,6 +166,30 @@ mask(::Type{T}, j::Integer, i::Integer) where {T} = mask(T, i-j) << j
 mask_2(::Type{T}, j::Integer, i::Integer) where {T} = mask(T, i) & ~mask(T, j)
 
 mask(j::Integer, i::Integer) = mask(Word, j, i)
+
+
+# ** masked
+
+"""
+    masked(x, [j::Integer], i::Integer) -> typeof(x)
+
+Return the result of applying the mask `mask(x, [j], i)` to `x`, i.e.
+`x & mask(x, [j], i)`.
+If `x` is a float, apply the mask to the underlying bits.
+
+# Examples
+```jldoctest
+julia> masked(0b11110011, 1, 5) === 0b00010010
+true
+
+julia> x = rand(); masked(-x, 0, 63) === x
+true
+```
+"""
+masked(x, i::Integer) = x & mask(typeof(x), i)
+masked(x, j::Integer, i::Integer) = x & mask(typeof(x), j, i)
+masked(x::AbstractFloat, i::Integer) = reinterpret(typeof(x), masked(intfallback(x), i))
+masked(x::AbstractFloat, j::Integer, i::Integer) = reinterpret(typeof(x), masked(intfallback(x), j, i))
 
 
 # * bits & BitVector1
