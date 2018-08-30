@@ -36,6 +36,39 @@ end
             @test _bit(-Float32(1.0), 32) ≜ val(_bit, Int32(1))
         end
     end
+
+    @testset "mask" begin
+        for T = Base.BitInteger_types
+            i = rand(0:min(999, bitsize(T)))
+            @test mask(T, i) ≜ Bits.mask_2(T, i)
+            @test mask(T) ≜ -1 % T
+        end
+        i = rand(0:bitsize(Bits.Word))
+        @test mask(Bits.Word, i) === mask(i)
+        @test mask(Bits.Word) === mask()
+        @test mask(0) == 0
+        @test mask(1) == 1
+        @test mask(Sys.WORD_SIZE) === mask() === 0xffffffffffffffff
+        @test mask(UInt64, 64) == mask(64)
+        @test mask(UInt64, 63) == 0x7fffffffffffffff
+        @test mask(BigInt, 0) ≜ big(0)
+        @test mask(BigInt, 1) ≜ big(1)
+        @test mask(BigInt, 1024) ≜ big(2)^1024 - 1
+
+        # 2-arg mask
+        for T = (Base.BitInteger_types..., BigInt)
+            j, i = minmax(rand(0:min(999, bitsize(T)), 2)...)
+            m = mask(T, j, i)
+            @test m ≜ Bits.mask_2(T, j, i)
+            if T === Bits.Word
+                @test m === mask(j, i)
+            end
+            @test count_ones(m) == i-j
+            @test m >>> j ≜ mask(T, i-j)
+            @test mask(T, j, -1) ≜ ~mask(T, j)
+        end
+        @test mask(UInt64, 2, 4) === 0x000000000000000c
+    end
 end
 
 @testset "bits" begin

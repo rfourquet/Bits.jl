@@ -2,14 +2,16 @@
 
 module Bits
 
-export bitsize, bits, bit, tstbit
+export bitsize, bits, bit, tstbit, mask
 
-using Base: BitIntegerType
+using Base: BitInteger, BitIntegerType
 
 
 # * constants
 
 const Index = Int # do not change
+
+const Word = UInt # default integer type
 
 """
 `INF::Int` indicates the position of the bit at "infinity", for types
@@ -53,7 +55,7 @@ intfallback(x::Integer) = x
 intfallback(x::BitFloats) = reinterpret(Signed, x)
 
 
-# * bit functions
+# * bit functions: bit, tstbit, mask
 
 # ** bit
 
@@ -98,6 +100,72 @@ true
 """
 tstbit(x, i::Integer) = bit(x, i) % Bool
 tstbit(x::BigInt, i::Integer) = Base.GMP.MPZ.tstbit(x, i-1)
+
+
+# ** mask
+
+"""
+    mask(T::Type{<:Integer}:=UInt, i::Integer=bitsize(T)) -> T
+
+Return an integer of type `T` whose `i` right-most bits are `1`, and the
+others are `0` (i.e. of the form `0b0...01...1` with exactly `i` `1`s.
+When `i` is not specified, all possible bits are set to `1`.
+When `i < 0`, the result is not specified.
+`T` defaults to `UInt`.
+
+# Examples
+```jldoctest
+julia> mask(3)
+0x0000000000000007
+
+julia> mask(UInt8)
+0xff
+
+julia> bits(mask(Int32, 24))
+|00000000 11111111 11111111 11111111|
+```
+"""
+mask(::Type{T}, i::Integer) where {T} = one(T) << i - one(T)
+
+# alternate implementation:
+mask_2(T::BitIntegerType, i::Integer) = let s = bitsize(T)-i
+    mask(T) << s >>> s
+end
+
+mask(i::Integer) = mask(Word, i)
+
+mask(::Type{T}=Word) where {T} = ~zero(T)
+
+# TODO: optimize
+mask(::Type{BigInt}, i::Integer) = one(BigInt) << i - 1
+
+"""
+    mask(T::Type{<:Integer} := UInt, j::Integer, i::Integer) -> T
+
+Return an integer of type `T` whose `j` right-most bits are `0`, the
+following `i-j` bits are `1`, and the remaining bits are `0`
+(i.e. of the form `0b0...01...10...0` with exactly `i-j` `1`s preceded by
+`j` `0`s).
+When `j < 0`, the result is not specified.
+When `i < 0`, the result is equal to `~mask(T, j)`, i.e. of the form
+`1...10...0` with exactly `j` zeros.
+NOTE: unstable API, could be changed to mask(j, i-j) instead.
+
+# Examples
+```jldoctest
+julia> bits(mask(UInt8, 2, 5))
+|00011100|
+
+julia> bits(mask(BigInt, 3, -1))
+|...1 11111111 11111111 11111111 11111111 11111111 11111111 11111111 11111000|
+```
+"""
+mask(::Type{T}, j::Integer, i::Integer) where {T} = mask(T, i-j) << j
+
+# alternate implementation
+mask_2(::Type{T}, j::Integer, i::Integer) where {T} = mask(T, i) & ~mask(T, j)
+
+mask(j::Integer, i::Integer) = mask(Word, j, i)
 
 
 # * bits & BitVector1
