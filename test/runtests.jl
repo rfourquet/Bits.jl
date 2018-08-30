@@ -8,7 +8,10 @@ using Bits , Test
     end
     @test bitsize(BigInt) === Bits.INF
     @test bitsize(Bool) === 1
-    @test_throws MethodError bitsize(Float64)
+    @test bitsize(Float64) === 64
+    @test bitsize(Float32) === 32
+    @test bitsize(Float16) === 16
+    @test_throws MethodError bitsize(BigFloat)
 end
 
 @testset "bits" begin

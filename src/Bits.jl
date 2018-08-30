@@ -32,13 +32,15 @@ Return the number of bits that can be held by type `T`.
 ```jldoctest
 julia> bitsize(Int32)  == 32           &&
        bitsize(true)   == 1            &&
-       bitsize(big(0)) == Bits.INF
+       bitsize(big(0)) == Bits.INF     &&
+       bitsize(1.2)    == 64
 true
 ```
 """
 bitsize(T::BitIntegerType) = sizeof(T) * 8
 bitsize(::Type{BigInt}) = INF
 bitsize(::Type{Bool}) = 1
+bitsize(T::Union{Type{Float16},Type{Float32},Type{Float64}}) = sizeof(T) * 8
 bitsize(T::Type) = throw(MethodError(bitsize, (T,)))
 bitsize(x) = bitsize(typeof(x))
 
