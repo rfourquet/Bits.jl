@@ -59,4 +59,15 @@ end
     end
     @test bits(Float64(-16))[53:end] == [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]
     @test count(bits(Float64(-16))) == 4
+
+    @testset "array indexing" begin
+        v = bits(1234)[1:8]
+        @test v == [0, 1, 0, 0, 1, 0, 1, 1]
+        @test v isa Bits.BitVector1Mask
+        v = bits(1.2)[10:17]
+        @test v == [1, 0, 0, 1, 1, 0, 0, 1]
+        @test v isa Bits.BitVector1Mask{Int64}
+        @test all(bits(123)[[1, 2, 4, 5, 6, 7]])
+        @test count(bits(123)) == 6
+    end
 end

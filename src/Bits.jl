@@ -46,9 +46,11 @@ bitsize(T::Union{Type{Float16},Type{Float32},Type{Float64}}) = sizeof(T) * 8
 bitsize(T::Type) = throw(MethodError(bitsize, (T,)))
 bitsize(x) = bitsize(typeof(x))
 
-lastactualpos(x::Integer) = bitsize(x)
+lastactualpos(x::Union{Integer,BitFloats}) = bitsize(intfallback(x))
 lastactualpos(x::BigInt) = abs(x.size) * sizeof(Base.GMP.Limb) * 8
-lastactualpos(x::BitFloats) = lastactualpos(reinterpret(Signed, x))
+
+intfallback(x::Integer) = x
+intfallback(x::BitFloats) = reinterpret(Signed, x)
 
 
 # * bit functions
@@ -77,7 +79,7 @@ julia> bit(-1.0, 64)
 ```
 """
 bit(x::Integer, i::Integer) = (x >>> UInt(i-1)) & one(x)
-bit(x::BitFloats, i::Integer) = bit(reinterpret(Signed, x), i)
+bit(x::BitFloats, i::Integer) = bit(intfallback(x), i)
 bit(x::BigInt, i::Integer) = tstbit(x, i) ? big(1) : big(0)
 
 
@@ -124,6 +126,9 @@ julia> bits(big(2)^63)
 
 julia> bits(Float32(-7))
 |1 10000001 11000000000000000000000|
+
+julia> ans[1:23] # creates a vector of bits with a specific length
+|1100000 00000000 00000000|
 ```
 """
 bits(x::Real) = BitVector1(x)
@@ -132,12 +137,28 @@ bits(x::Real) = BitVector1(x)
 # ** BitVector1
 
 # similar to a BitVector, but with only 1 word to store bits (instead of 1 array thereof)
-struct BitVector1{T<:Real} <: AbstractVector{Bool}
+abstract type AbstractBitVector1 <: AbstractVector{Bool} end
+
+struct BitVector1{T<:Real} <: AbstractBitVector1
     x::T
 end
 
+struct BitVector1Mask{T<:Real} <: AbstractBitVector1
+    x::T
+    len::Int
+end
+
 Base.size(v::BitVector1) = (bitsize(v.x),)
-Base.getindex(v::BitVector1, i::Integer) = tstbit(v.x, i)
+Base.size(v::BitVector1Mask) = (v.len,)
+Base.getindex(v::AbstractBitVector1, i::Integer) = tstbit(v.x, i)
+
+function Base.getindex(v::AbstractBitVector1, a::AbstractVector{<:Integer})
+    xx, _ = foldl(a, init=(zero(intfallback(v.x)), 0)) do xs, i
+        x, s = xs
+        (x | bit(v.x, i) << s, s+1)
+    end
+    BitVector1Mask(xx, length(a))
+end
 
 
 # ** show
@@ -147,22 +168,21 @@ spaceafter(x::Float16, i) = i in (11, 16)
 spaceafter(x::Float32, i) = i in (24, 32)
 spaceafter(x::Float64, i) = i in (53, 64)
 
-function Base.show(io::IO, v::BitVector1)
-    if v.x isa Bool
-        return print(io, "|$(Int(v[1]))|")
-    elseif v.x isa BigInt
+function Base.show(io::IO, v::AbstractBitVector1)
+    if v.x isa BigInt && v isa BitVector1
         print(io, "|...", v.x < 0 ? "1 " : "0 ")
     else
         print(io, "|")
     end
-    for i = lastactualpos(v.x):-1:1
+    l = v isa BitVector1 ? lastactualpos(v.x) : v.len
+    for i = l:-1:1
         show(io, v[i] % Int)
         spaceafter(v.x, i) && i != 1 && print(io, ' ')
     end
     print(io, "|")
 end
 
-Base.show(io::IO, ::MIME"text/plain", v::BitVector1) = show(io, v)
+Base.show(io::IO, ::MIME"text/plain", v::AbstractBitVector1) = show(io, v)
 
 
 end # module
