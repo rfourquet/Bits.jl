@@ -57,4 +57,6 @@ end
         @test v[64] === true
         @test count(v) == 1
     end
+    @test bits(Float64(-16))[53:end] == [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]
+    @test count(bits(Float64(-16))) == 4
 end

@@ -48,6 +48,7 @@ bitsize(x) = bitsize(typeof(x))
 
 lastactualpos(x::Integer) = bitsize(x)
 lastactualpos(x::BigInt) = abs(x.size) * sizeof(Base.GMP.Limb) * 8
+lastactualpos(x::BitFloats) = lastactualpos(reinterpret(Signed, x))
 
 
 # * bit functions
@@ -100,7 +101,7 @@ tstbit(x::BigInt, i::Integer) = Base.GMP.MPZ.tstbit(x, i-1)
 # * bits & BitVector1
 
 """
-    bits(x::Integer)
+    bits(x::Real)
 
 Create an immutable view on the bits of `x` as a vector of `Bool`, similar to a `BitVector`.
 If `x` is a `BigInt`, the vector has length [`Bits.INF`](@ref).
@@ -120,23 +121,31 @@ julia> bits(true)
 
 julia> bits(big(2)^63)
 |...0 10000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000|
+
+julia> bits(Float32(-7))
+|1 10000001 11000000000000000000000|
 ```
 """
-bits(x::Integer) = BitVector1(x)
+bits(x::Real) = BitVector1(x)
 
 
 # ** BitVector1
 
 # similar to a BitVector, but with only 1 word to store bits (instead of 1 array thereof)
-struct BitVector1{T<:Integer} <: AbstractVector{Bool}
+struct BitVector1{T<:Real} <: AbstractVector{Bool}
     x::T
 end
 
 Base.size(v::BitVector1) = (bitsize(v.x),)
-Base.getindex(v::BitVector1, i::Integer) = (v.x >> (UInt(i)-1)) % Bool
+Base.getindex(v::BitVector1, i::Integer) = tstbit(v.x, i)
 
 
 # ** show
+
+spaceafter(x, i) = i % 8 == 1
+spaceafter(x::Float16, i) = i in (11, 16)
+spaceafter(x::Float32, i) = i in (24, 32)
+spaceafter(x::Float64, i) = i in (53, 64)
 
 function Base.show(io::IO, v::BitVector1)
     if v.x isa Bool
@@ -148,7 +157,7 @@ function Base.show(io::IO, v::BitVector1)
     end
     for i = lastactualpos(v.x):-1:1
         show(io, v[i] % Int)
-        i % 8 == 1 && i != 1 && print(io, ' ')
+        spaceafter(v.x, i) && i != 1 && print(io, ' ')
     end
     print(io, "|")
 end
