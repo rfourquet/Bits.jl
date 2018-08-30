@@ -118,5 +118,11 @@ end
         @test v isa Bits.BitVector1Mask{Int64}
         @test all(bits(123)[[1, 2, 4, 5, 6, 7]])
         @test count(bits(123)) == 6
+        # test optimization for v[i:j]
+        for T = (Base.BitInteger_types..., BigInt)
+            i, j = minmax(rand(1:min(999, bitsize(T)), 2)...)
+            v = bits(rand(T == BigInt ? (big(-999):big(999)) : T))
+            @test v[i:j] == v[i:1:j]
+        end
     end
 end

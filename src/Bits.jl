@@ -252,6 +252,12 @@ function Base.getindex(v::AbstractBitVector1, a::AbstractVector{<:Integer})
     BitVector1Mask(xx, length(a))
 end
 
+function Base.getindex(v::AbstractBitVector1, a::AbstractUnitRange{<:Integer})
+    j, i = extrema(a)
+    x = masked(intfallback(v.x), j-1, i) >> (j-1)
+    BitVector1Mask(x, length(a))
+end
+
 
 # ** show
 
