@@ -2,7 +2,7 @@
 
 module Bits
 
-export bitsize, bits
+export bitsize, bits, bit, tstbit
 
 using Base: BitIntegerType
 
@@ -18,6 +18,8 @@ which can carry an arbitrary number of bits, like BigInt.
 Currently, `Bits.INF == typemax(Int)`.
 """
 const INF = typemax(Index)
+
+const BitFloats = Union{Float16,Float32,Float64}
 
 
 # * bitsize
@@ -46,6 +48,53 @@ bitsize(x) = bitsize(typeof(x))
 
 lastactualpos(x::Integer) = bitsize(x)
 lastactualpos(x::BigInt) = abs(x.size) * sizeof(Base.GMP.Limb) * 8
+
+
+# * bit functions
+
+# ** bit
+
+"""
+    bit(x::Integer, i::Integer)       -> typeof(x)
+    bit(x::AbstractFloat, i::Integer) -> Integer
+
+Return the bit of `x` at position `i`, with value `0` or `1`.
+If `x::Integer`, the returned bit is of the same type.
+If `x::AbstractFloat` is a bits type, the returned bit is a signed integer with the same [`bitsize`](@ref) as `x`.
+See also [`tstbit`](@ref).
+
+# Examples
+```jldoctest
+julia> bit(0b101, 1)
+0x01
+
+julia> bit(0b101, 2)
+0x00
+
+julia> bit(-1.0, 64)
+1
+```
+"""
+bit(x::Integer, i::Integer) = (x >>> UInt(i-1)) & one(x)
+bit(x::BitFloats, i::Integer) = bit(reinterpret(Signed, x), i)
+bit(x::BigInt, i::Integer) = tstbit(x, i) ? big(1) : big(0)
+
+
+# ** tstbit
+
+"""
+    tstbit(x::Real, i::Integer) -> Bool
+
+Similar to [`bit`](@ref) but returns the bit at position `i` as a `Bool`.
+
+# Examples
+```jldoctest
+julia> tstbit(0b101, 3)
+true
+```
+"""
+tstbit(x, i::Integer) = bit(x, i) % Bool
+tstbit(x::BigInt, i::Integer) = Base.GMP.MPZ.tstbit(x, i-1)
 
 
 # * bits & BitVector1
