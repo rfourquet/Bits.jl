@@ -16,6 +16,16 @@ x ≜ y = typeof(x) == typeof(y) && x == y
 end
 
 @testset "bit functions" begin
+    @testset "weight" begin
+        for T = (Base.BitInteger_types..., BigInt)
+            @test weight(T(123)) === 6
+            T == BigInt && continue
+            @test weight(typemax(T)) === bitsize(T) - (T <: Signed)
+            @test weight(typemin(T)) === Int(T <: Signed)
+        end
+        @test weight(big(-1)) === weight(big(-999)) === Bits.INF
+    end
+
     @testset "bit & tstbit" begin
         val(::typeof(bit), x) = x
         val(::typeof(tstbit), x) = x % Bool
