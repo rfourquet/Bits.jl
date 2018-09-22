@@ -45,6 +45,10 @@ end
             @test _bit(-1.0, 64) ≜ val(_bit, 1)
             @test _bit( Float32(1.0), 32) ≜ val(_bit, Int32(0))
             @test _bit(-Float32(1.0), 32) ≜ val(_bit, Int32(1))
+            x = BigFloat(-1.0, 128)
+            for i=1:128+65
+                @test _bit(x, i) == val(_bit, big(i ∈ [128, 129, 128+65]))
+            end
         end
     end
 

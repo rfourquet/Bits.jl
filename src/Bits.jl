@@ -113,7 +113,7 @@ julia> bit(-1.0, 64)
 """
 bit(x::Integer, i::Integer) = (x >>> UInt(i-1)) & one(x)
 bit(x::BitFloats, i::Integer) = bit(asint(x), i)
-bit(x::BigInt, i::Integer) = tstbit(x, i) ? big(1) : big(0)
+bit(x::Union{BigInt,BigFloat}, i::Integer) = tstbit(x, i) ? big(1) : big(0)
 
 
 # ** tstbit
@@ -131,6 +131,30 @@ true
 """
 tstbit(x, i::Integer) = bit(x, i) % Bool
 tstbit(x::BigInt, i::Integer) = Base.GMP.MPZ.tstbit(x, i-1)
+
+# from Random module
+using Base.GMP: Limb
+const bits_in_Limb = bitsize(Limb)
+const Limb_high_bit = one(Limb) << (bits_in_Limb-1)
+
+function tstbit(x::BigFloat, i::Integer)
+    prec = precision(x)
+    if i > prec
+        i -= prec
+        if i > 64
+            i == 65 ? (x.sign == -1) : false
+        else
+            tstbit(x.exp, i)
+        end
+    else
+        nlimbs = (prec-1) ÷ bits_in_Limb + 1
+        tstbit(x.d, i + nlimbs * bits_in_Limb - prec)
+    end
+end
+
+tstbit(p::Ptr{T}, i::Integer) where {T} =
+    tstbit(unsafe_load(p, 1 + (i-1) ÷ bitsize(T)),
+           mod1(i, bitsize(T)))
 
 
 # ** mask
