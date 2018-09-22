@@ -54,11 +54,12 @@ bitsize(T::Union{Type{Float16},Type{Float32},Type{Float64}}) = sizeof(T) * 8
 bitsize(T::Type) = throw(MethodError(bitsize, (T,)))
 bitsize(x) = bitsize(typeof(x))
 
-lastactualpos(x::Union{Integer,BitFloats}) = bitsize(intfallback(x))
+lastactualpos(x::Union{Integer,BitFloats}) = bitsize(asint(x))
 lastactualpos(x::BigInt) = abs(x.size) * sizeof(Base.GMP.Limb) * 8
+lastactualpos(x::BigFloat) = 1 + 64 + precision(x)
 
-intfallback(x::Integer) = x
-intfallback(x::BitFloats) = reinterpret(Signed, x)
+asint(x::Integer) = x
+asint(x::BitFloats) = reinterpret(Signed, x)
 
 
 # * bit functions: weight, bit, tstbit, mask, low0, low1, scan0, scan1
@@ -111,7 +112,7 @@ julia> bit(-1.0, 64)
 ```
 """
 bit(x::Integer, i::Integer) = (x >>> UInt(i-1)) & one(x)
-bit(x::BitFloats, i::Integer) = bit(intfallback(x), i)
+bit(x::BitFloats, i::Integer) = bit(asint(x), i)
 bit(x::BigInt, i::Integer) = tstbit(x, i) ? big(1) : big(0)
 
 
@@ -218,8 +219,8 @@ true
 """
 masked(x, i::Integer) = x & mask(typeof(x), i)
 masked(x, j::Integer, i::Integer) = x & mask(typeof(x), j, i)
-masked(x::AbstractFloat, i::Integer) = reinterpret(typeof(x), masked(intfallback(x), i))
-masked(x::AbstractFloat, j::Integer, i::Integer) = reinterpret(typeof(x), masked(intfallback(x), j, i))
+masked(x::AbstractFloat, i::Integer) = reinterpret(typeof(x), masked(asint(x), i))
+masked(x::AbstractFloat, j::Integer, i::Integer) = reinterpret(typeof(x), masked(asint(x), j, i))
 
 
 # ** low0 & low1, scan0 & scan1
@@ -244,7 +245,7 @@ low0, low1
 low0(x) = scan0(x)
 low1(x) = scan1(x)
 
-low0(x, n::Integer) = low1(~intfallback(x), n)
+low0(x, n::Integer) = low1(~asint(x), n)
 
 function low1(x, n::Integer)
     i = 0
@@ -273,11 +274,11 @@ true
 """
 scan0, scan1
 
-scan0(x, i::Integer=1) = scan1(~intfallback(x), i)
+scan0(x, i::Integer=1) = scan1(~asint(x), i)
 
 function scan1(x, i::Integer=1)
     i < 1 && return NOTFOUND
-    y = intfallback(x) >>> (i % UInt - 1)
+    y = asint(x) >>> (i % UInt - 1)
     iszero(y) ? NOTFOUND : i + trailing_zeros(y)
 end
 
@@ -340,7 +341,7 @@ Base.size(v::BitVector1Mask) = (v.len,)
 Base.getindex(v::AbstractBitVector1, i::Integer) = tstbit(v.x, i)
 
 function Base.getindex(v::AbstractBitVector1, a::AbstractVector{<:Integer})
-    xx, _ = foldl(a, init=(zero(intfallback(v.x)), 0)) do xs, i
+    xx, _ = foldl(a, init=(zero(asint(v.x)), 0)) do xs, i
         x, s = xs
         (x | bit(v.x, i) << s, s+1)
     end
@@ -349,7 +350,7 @@ end
 
 function Base.getindex(v::AbstractBitVector1, a::AbstractUnitRange{<:Integer})
     j, i = extrema(a)
-    x = masked(intfallback(v.x), j-1, i) >> (j-1)
+    x = masked(asint(v.x), j-1, i) >> (j-1)
     BitVector1Mask(x, length(a))
 end
 
