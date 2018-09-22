@@ -1,4 +1,5 @@
-using Bits , Test
+using Bits, Test
+using Bits: NOTFOUND
 
 x ≜ y = typeof(x) == typeof(y) && x == y
 
@@ -94,6 +95,58 @@ end
         end
         @test masked(0b11110011, 1, 5) ≜ 0b00010010
         @test masked(-1.0, 52, 63) === 1.0
+    end
+
+    @testset "low0, low1, scan0, scan1" begin
+        for T = (Base.BitInteger_types..., BigInt)
+            x = T(0b01011010)
+            @test low1(x, 0) == NOTFOUND
+            @test low1(x)    == 2
+            @test low1(x, 1) == 2
+            @test low1(x, 2) == 4
+            @test low1(x, 3) == 5
+            @test low1(x, 4) == 7
+            for i = 5:min(128, bitsize(T))+1
+                @test low1(x, i) == NOTFOUND
+            end
+            @test low0(x, 0) == NOTFOUND
+            @test low0(x)    == 1
+            @test low0(x, 1) == 1
+            @test low0(x, 2) == 3
+            @test low0(x, 3) == 6
+            @test low0(x, 4) == 8
+            for i = 5:min(128, bitsize(T))
+                @test low0(x, i) == (i+4 <= bitsize(T) ? i+4 : NOTFOUND)
+            end
+
+            @test scan1(x, 0) == NOTFOUND
+            @test scan1(x, 1) == 2
+            @test scan1(x)    == 2
+            @test scan1(x, 2) == 2
+            @test scan1(x, 3) == 4
+            @test scan1(x, 4) == 4
+            @test scan1(x, 5) == 5
+            @test scan1(x, 6) == 7
+            @test scan1(x, 7) == 7
+            for i = 8:min(128, bitsize(T))+1
+                @test scan1(x, i) == NOTFOUND
+            end
+            @test scan0(x, 0) == NOTFOUND
+            @test scan0(x, 1) == 1
+            @test scan0(x)    == 1
+            @test scan0(x, 2) == 3
+            @test scan0(x, 3) == 3
+            @test scan0(x, 4) == 6
+            @test scan0(x, 5) == 6
+            @test scan0(x, 6) == 6
+            @test scan0(x, 7) == 8
+            @test scan0(x, 8) == 8
+            for i = 9:min(128, bitsize(T))
+                @test scan0(x, i) == i
+            end
+            T === BigInt && continue
+            @test scan0(x, bitsize(T)+1) == NOTFOUND
+        end
     end
 end
 

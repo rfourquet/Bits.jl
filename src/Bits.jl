@@ -2,7 +2,7 @@
 
 module Bits
 
-export bitsize, bits, bit, tstbit, mask, masked, weight
+export bitsize, bits, bit, tstbit, mask, masked, weight, scan0, scan1, low0, low1
 
 using Base: BitInteger, BitIntegerType
 
@@ -20,6 +20,12 @@ which can carry an arbitrary number of bits, like BigInt.
 Currently, `Bits.INF == typemax(Int)`.
 """
 const INF = typemax(Index)
+
+"""
+`NOTFOUND::Int` indicates that no position matches the request, similar
+to `nothing` with `findnext`. Currently, `Bits.NOTFOUND == 0`.
+"""
+const NOTFOUND = 0
 
 const BitFloats = Union{Float16,Float32,Float64}
 
@@ -55,7 +61,7 @@ intfallback(x::Integer) = x
 intfallback(x::BitFloats) = reinterpret(Signed, x)
 
 
-# * bit functions: weight, bit, tstbit, mask
+# * bit functions: weight, bit, tstbit, mask, low0, low1, scan0, scan1
 
 # ** weight
 
@@ -214,6 +220,71 @@ masked(x, i::Integer) = x & mask(typeof(x), i)
 masked(x, j::Integer, i::Integer) = x & mask(typeof(x), j, i)
 masked(x::AbstractFloat, i::Integer) = reinterpret(typeof(x), masked(intfallback(x), i))
 masked(x::AbstractFloat, j::Integer, i::Integer) = reinterpret(typeof(x), masked(intfallback(x), j, i))
+
+
+# ** low0 & low1, scan0 & scan1
+
+"""
+    low0(x, n::Integer=1)
+    low1(x, n::Integer=1)
+
+Return the position of the `n`th `0` (for `low0`) or `1` (for `low1`) in `x.
+
+# Examples
+```jldoctest
+julia> low0(0b10101, 2)
+4
+
+julia> low1(0b10101, 4) == Bits.NOTFOUND
+true
+```
+"""
+low0, low1
+
+low0(x) = scan0(x)
+low1(x) = scan1(x)
+
+low0(x, n::Integer) = low1(~intfallback(x), n)
+
+function low1(x, n::Integer)
+    i = 0
+    while n > 0
+        i = scan1(x, i+1)
+        i === 0 && break
+        n -= 1
+    end
+    i
+end
+
+"""
+    scan0(x, n::Integer=1)
+    scan1(x, n::Integer=1)
+
+Return the position of the first `0` (for `scan0`) or `1` (for `scan1`) after or including `n` in `x`.
+
+# Examples
+```jldoctest
+julia> scan0(0b10101, 1)
+2
+
+julia> scan1(0b10101, 6) == Bits.NOTFOUND
+true
+```
+"""
+scan0, scan1
+
+scan0(x, i::Integer=1) = scan1(~intfallback(x), i)
+
+function scan1(x, i::Integer=1)
+    i < 1 && return NOTFOUND
+    y = intfallback(x) >>> (i % UInt - 1)
+    iszero(y) ? NOTFOUND : i + trailing_zeros(y)
+end
+
+@assert NOTFOUND === 0
+# unfortunately, in Base.GMP.MPZ the wrapper converts to Int and fails for big(-1) or big(0)
+scan0(x::BigInt, i::Integer=1) = 1 + ccall((:__gmpz_scan0, :libgmp), Culong, (Ref{BigInt}, Culong), x, i % Culong - 1) % Int
+scan1(x::BigInt, i::Integer=1) = 1 + ccall((:__gmpz_scan1, :libgmp), Culong, (Ref{BigInt}, Culong), x, i % Culong - 1) % Int
 
 
 # * bits & BitVector1
