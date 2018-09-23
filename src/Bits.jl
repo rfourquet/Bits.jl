@@ -29,6 +29,7 @@ const NOTFOUND = 0
 
 const BitFloats = Union{Float16,Float32,Float64}
 
+const MPFR_EXP_BITSIZE = sizeof(Clong) * 8
 
 # * bitsize
 
@@ -387,12 +388,13 @@ end
 
 # ** show
 
+sig_exp_bits(x) = Base.Math.significand_bits(typeof(x)), Base.Math.exponent_bits(typeof(x))
+sig_exp_bits(x::BigFloat) = precision(x), MPFR_EXP_BITSIZE
+
 showsep(io, x, i) = (i % 8 == 0) && print(io, ' ')
 
 function showsep(io, x::AbstractFloat, i)
-    F = typeof(x)
-    sigbits = Base.Math.significand_bits(typeof(x))
-    expbits = Base.Math.exponent_bits(typeof(x))
+    sigbits, expbits = sig_exp_bits(x)
     if i == sigbits || i == sigbits + expbits
         print(io, '|')
     elseif i < sigbits && i % 8 == 0 || i > sigbits && (i-sigbits) % 8 == 0
