@@ -37,13 +37,16 @@ const BitFloats = Union{Float16,Float32,Float64}
     bitsize(::T)     -> Int
 
 Return the number of bits that can be held by type `T`.
+Only the second method may be defined when the number of bits
+is a dymanic value, like for `BitFloat`.
 
 # Examples
 ```jldoctest
-julia> bitsize(Int32)  == 32           &&
-       bitsize(true)   == 1            &&
-       bitsize(big(0)) == Bits.INF     &&
-       bitsize(1.2)    == 64
+julia> bitsize(Int32)    == 32         &&
+       bitsize(true)     == 1          &&
+       bitsize(big(0))   == Bits.INF   &&
+       bitsize(1.2)      == 64         &&
+       bitsize(big(1.2)) == 321
 true
 ```
 """
@@ -54,9 +57,10 @@ bitsize(T::Union{Type{Float16},Type{Float32},Type{Float64}}) = sizeof(T) * 8
 bitsize(T::Type) = throw(MethodError(bitsize, (T,)))
 bitsize(x) = bitsize(typeof(x))
 
-lastactualpos(x::Union{Integer,BitFloats}) = bitsize(asint(x))
+bitsize(x::BigFloat) =  1 + 64 + precision(x)
+
+lastactualpos(x::Union{Integer,BitFloats,BigFloat}) = bitsize(x)
 lastactualpos(x::BigInt) = abs(x.size) * sizeof(Base.GMP.Limb) * 8
-lastactualpos(x::BigFloat) = 1 + 64 + precision(x)
 
 asint(x::Integer) = x
 asint(x::BitFloats) = reinterpret(Signed, x)

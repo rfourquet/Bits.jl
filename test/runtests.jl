@@ -4,7 +4,7 @@ using Bits: NOTFOUND
 x ≜ y = typeof(x) == typeof(y) && x == y
 
 @testset "bitsize" begin
-    for T in Base.BitInteger_types
+    for T in (Base.BitInteger_types..., Float16, Float32, Float64)
         @test bitsize(T) === sizeof(T) * 8
         @test bitsize(zero(T)) === bitsize(one(T)) === bitsize(T)
     end
@@ -14,6 +14,8 @@ x ≜ y = typeof(x) == typeof(y) && x == y
     @test bitsize(Float32) === 32
     @test bitsize(Float16) === 16
     @test_throws MethodError bitsize(BigFloat)
+    @test bitsize(BigFloat(1, 256)) == 321
+    @test bitsize(BigFloat(1, 100)) == 165
 end
 
 @testset "bit functions" begin
