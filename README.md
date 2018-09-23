@@ -6,10 +6,10 @@ This package implements functions to play with bits, of integers, and of floats 
 For example:
 ```julia
 julia> bits(0b110101011)
-|00000001 10101011|
+<00000001 10101011>
 
 julia> ans[1:4]
-|1011|
+<1011>
 ```
 
 Currently, the following functions are exported: `bit`, `bits`, `bitsize`, `mask`, `masked`, `tstbit`.
