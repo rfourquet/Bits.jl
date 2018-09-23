@@ -50,20 +50,22 @@ julia> bitsize(Int32)    == 32         &&
 true
 ```
 """
-bitsize(T::BitIntegerType) = sizeof(T) * 8
 bitsize(::Type{BigInt}) = INF
 bitsize(::Type{Bool}) = 1
-bitsize(T::Union{Type{Float16},Type{Float32},Type{Float64}}) = sizeof(T) * 8
-bitsize(T::Type) = throw(MethodError(bitsize, (T,)))
+bitsize(T::Type) = bitsize(Val(isbitstype(T)), T)
+
+bitsize(isbits::Val{true}, T::Type) = sizeof(T) * 8
+bitsize(isbits::Val{false}, T::Type) = throw(MethodError(bitsize, (T,)))
+
 bitsize(x) = bitsize(typeof(x))
 
 bitsize(x::BigFloat) =  1 + 64 + precision(x)
 
-lastactualpos(x::Union{Integer,BitFloats,BigFloat}) = bitsize(x)
+lastactualpos(x) = bitsize(x)
 lastactualpos(x::BigInt) = abs(x.size) * sizeof(Base.GMP.Limb) * 8
 
 asint(x::Integer) = x
-asint(x::BitFloats) = reinterpret(Signed, x)
+asint(x::AbstractFloat) = reinterpret(Signed, x)
 
 
 # * bit functions: weight, bit, tstbit, mask, low0, low1, scan0, scan1
@@ -116,7 +118,7 @@ julia> bit(-1.0, 64)
 ```
 """
 bit(x::Integer, i::Integer) = (x >>> UInt(i-1)) & one(x)
-bit(x::BitFloats, i::Integer) = bit(asint(x), i)
+bit(x::AbstractFloat, i::Integer) = bit(asint(x), i)
 bit(x::Union{BigInt,BigFloat}, i::Integer) = tstbit(x, i) ? big(1) : big(0)
 
 
