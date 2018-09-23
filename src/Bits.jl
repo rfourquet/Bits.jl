@@ -43,11 +43,13 @@ is a dymanic value, like for `BitFloat`.
 
 # Examples
 ```jldoctest
-julia> bitsize(Int32)    == 32         &&
-       bitsize(true)     == 1          &&
-       bitsize(big(0))   == Bits.INF   &&
-       bitsize(1.2)      == 64         &&
-       bitsize(big(1.2)) == 321
+julia> bitsize(Int32)  == 32        &&
+       bitsize(true)   == 1         &&
+       bitsize(big(0)) == Bits.INF  &&
+       bitsize(1.2)    == 64
+true
+
+julia> x = big(1.2); bitsize(x) == 256 + sizeof(x.exp)*8 + 1
 true
 ```
 """
@@ -60,7 +62,7 @@ bitsize(isbits::Val{false}, T::Type) = throw(MethodError(bitsize, (T,)))
 
 bitsize(x) = bitsize(typeof(x))
 
-bitsize(x::BigFloat) =  1 + 64 + precision(x)
+bitsize(x::BigFloat) =  1 + MPFR_EXP_BITSIZE + precision(x)
 
 lastactualpos(x) = bitsize(x)
 lastactualpos(x::BigInt) = abs(x.size) * sizeof(Base.GMP.Limb) * 8
@@ -148,8 +150,8 @@ function tstbit(x::BigFloat, i::Integer)
     prec = precision(x)
     if i > prec
         i -= prec
-        if i > 64
-            i == 65 ? (x.sign == -1) : false
+        if i > MPFR_EXP_BITSIZE
+            i == MPFR_EXP_BITSIZE + 1 ? (x.sign == -1) : false
         else
             tstbit(x.exp, i)
         end
