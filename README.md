@@ -12,7 +12,8 @@ julia> ans[1:4]
 <1011>
 ```
 
-Currently, the following functions are exported: `bit`, `bits`, `bitsize`, `mask`, `masked`, `tstbit`.
+Currently, the following functions are exported:
+`bit`, `bits`, `bitsize`, `low0`, `low1`, `mask`, `masked`, `scan0`, `scan1`, `tstbit`, `weight`.
 They have a docstring, but no HTML documentation is available yet.
 
 In these functions, the right-most bit of a value has index `1`, but in some applications it's more natural for it to have index `0`.

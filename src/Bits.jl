@@ -2,8 +2,7 @@
 
 module Bits
 
-export bitsize, bits, bit, tstbit, mask, masked, weight, scan0, scan1, low0, low1
-
+export bit, bits, bitsize, low0, low1, mask, masked, scan0, scan1, tstbit, weight
 using Base: BitInteger, BitIntegerType
 
 
